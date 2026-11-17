@@ -1,0 +1,97 @@
+---
+import Base from '../layouts/Base.astro';
+import { url } from '../utils/site';
+---
+<Base title="Page not found">
+  <header class="page-head">
+    <span class="kicker">404</span>
+    <h1>This page went snap.</h1>
+    <p>It may have moved, or it never existed. While you're here, tap anywhere in the box.</p>
+  </header>
+
+  <div class="snap-yard" data-yard role="img" aria-label="Tap to throw snaps. Sparks fly where you tap.">
+    <p class="yard-hint" aria-hidden="true">tap · tap · <b>snap</b></p>
+    <p class="yard-count" aria-live="polite"><span data-count>0</span> snapped</p>
+  </div>
+
+  <p class="actions"><a class="btn" href={url('/')}>Go to the front page</a> <a class="btn" href={url('/search/')}>Search</a></p>
+</Base>
+
+<script>
+  const yard = document.querySelector<HTMLElement>('[data-yard]');
+  const count = document.querySelector<HTMLElement>('[data-count]');
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const words = ['snap!', 'crack!', 'pop!', 'tsk!', 'crk!'];
+  let n = 0;
+
+  yard?.addEventListener('pointerdown', (e) => {
+    const r = yard.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    count!.textContent = String(++n);
+
+    const word = document.createElement('span');
+    word.className = 'snap-word';
+    word.textContent = words[Math.floor(Math.random() * words.length)];
+    word.style.left = `${x}px`;
+    word.style.top = `${y}px`;
+    yard.append(word);
+    setTimeout(() => word.remove(), 700);
+    if (calm) return;
+
+    // A ring of sparks, each flung out at its own angle and distance.
+    const sparks = 9 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < sparks; i++) {
+      const s = document.createElement('i');
+      s.className = 'spark-bit';
+      const angle = (i / sparks) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = 30 + Math.random() * 45;
+      s.style.left = `${x}px`;
+      s.style.top = `${y}px`;
+      s.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+      s.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+      s.style.setProperty('--rot', `${(angle * 180) / Math.PI}deg`);
+      yard.append(s);
+      setTimeout(() => s.remove(), 650);
+    }
+  });
+</script>
+
+<style>
+  .snap-yard {
+    position: relative; overflow: hidden; height: 240px; border-radius: var(--radius);
+    background:
+      radial-gradient(circle at 20% 30%, var(--accent-wash), transparent 40%),
+      radial-gradient(circle at 80% 70%, var(--accent-wash), transparent 45%),
+      var(--surface);
+    border: 1px dashed var(--rule); cursor: crosshair; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    display: grid; place-items: center;
+  }
+  .yard-hint { font: 700 1.1rem var(--sans); color: var(--ink-faint); letter-spacing: .1em; margin: 0; pointer-events: none; }
+  .yard-hint b { color: var(--accent-ink); }
+  .yard-count { position: absolute; right: .9rem; bottom: .6rem; margin: 0; font-size: .8rem; color: var(--ink-faint); pointer-events: none; }
+  .actions { margin-top: 1.5rem; }
+
+  .snap-yard :global(.snap-word) {
+    position: absolute; transform: translate(-50%, -50%); pointer-events: none;
+    font: 900 1.4rem var(--sans); color: var(--accent); letter-spacing: .02em;
+    animation: word-pop .7s ease-out forwards;
+  }
+  .snap-yard :global(.spark-bit) {
+    position: absolute; width: 18px; height: 3px; border-radius: 2px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, var(--accent) 40%, #fde68a);
+    transform: translate(-50%, -50%) rotate(var(--rot));
+    animation: fling .65s cubic-bezier(.15, .8, .3, 1) forwards;
+  }
+  @keyframes word-pop {
+    0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+    30% { transform: translate(-50%, -90%) scale(1.15); opacity: 1; }
+    100% { transform: translate(-50%, -150%) scale(1); opacity: 0; }
+  }
+  @keyframes fling {
+    to {
+      transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scaleX(.3);
+      opacity: 0;
+    }
+  }
+</style>

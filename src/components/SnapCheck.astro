@@ -1,0 +1,135 @@
+---
+/**
+ * The Snap Check: a tiny, server-free bot filter.
+ *
+ * The contact address is never in the HTML as text. It is reversed, base64-encoded and split into
+ * shuffled pieces at build time. A visitor reveals it by pressing and holding the button while a
+ * spark "charges" (or holding Space/Enter on a keyboard). The script only decodes after:
+ *   - a genuine (trusted) press, held for HOLD_MS,
+ *   - the page has been open for at least MIN_PAGE_MS (instant bot visits fail),
+ * so address-harvesting bots that scan the page source get nothing usable.
+ *
+ * Honest limits: this stops scrapers and spam harvesters, not a determined person with a browser.
+ */
+interface Props { email: string; label?: string }
+const { email, label = 'Hold to reveal the address' } = Astro.props;
+
+const encoded = Buffer.from([...email].reverse().join(''), 'utf8').toString('base64');
+const size = Math.ceil(encoded.length / 4);
+const pieces = Array.from({ length: 4 }, (_, i) => ({ i, v: encoded.slice(i * size, (i + 1) * size) }));
+// Shuffle deterministically so piece order in the HTML isn't the real order.
+const shuffled = [pieces[2], pieces[0], pieces[3], pieces[1]].filter(Boolean);
+---
+<div class="snapcheck" data-snapcheck>
+  <button type="button" class="hold" aria-describedby="snapcheck-help">
+    <svg class="ring" viewBox="0 0 44 44" aria-hidden="true">
+      <circle class="track" cx="22" cy="22" r="19" />
+      <circle class="charge" cx="22" cy="22" r="19" pathLength="100" />
+    </svg>
+    <svg class="mini-spark" viewBox="0 0 32 32" aria-hidden="true">
+      <g stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+        <line x1="16" y1="4" x2="16" y2="9" /><line x1="16" y1="23" x2="16" y2="28" />
+        <line x1="4" y1="16" x2="9" y2="16" /><line x1="23" y1="16" x2="28" y2="16" />
+        <line x1="7.5" y1="7.5" x2="11" y2="11" /><line x1="21" y1="21" x2="24.5" y2="24.5" />
+        <line x1="24.5" y1="7.5" x2="21" y2="11" /><line x1="11" y1="21" x2="7.5" y2="24.5" />
+      </g>
+      <circle cx="16" cy="16" r="3.2" fill="currentColor" />
+    </svg>
+    <span class="hold-label">{label}</span>
+  </button>
+  <p id="snapcheck-help" class="help">Press and hold for a second. This keeps spam bots from collecting the address.</p>
+  <p class="result" aria-live="polite" hidden></p>
+  {shuffled.map((p) => <span hidden data-p={p.i} data-v={p.v}></span>)}
+</div>
+
+<script>
+  const HOLD_MS = 1100;
+  const MIN_PAGE_MS = 1500;
+  const opened = performance.now();
+
+  document.querySelectorAll<HTMLElement>('[data-snapcheck]').forEach((box) => {
+    const btn = box.querySelector<HTMLButtonElement>('.hold')!;
+    const result = box.querySelector<HTMLElement>('.result')!;
+    let timer: number | undefined;
+
+    const decode = () =>
+      [...box.querySelectorAll<HTMLElement>('[data-p]')]
+        .sort((a, b) => Number(a.dataset.p) - Number(b.dataset.p))
+        .map((el) => el.dataset.v)
+        .join('');
+
+    const reveal = () => {
+      const bytes = Uint8Array.from(atob(decode()), (c) => c.charCodeAt(0));
+      const addr = [...new TextDecoder().decode(bytes)].reverse().join('');
+      box.classList.add('revealed');
+      btn.hidden = true;
+      result.hidden = false;
+      const a = document.createElement('a');
+      a.href = `mailto:${addr}`;
+      a.textContent = addr;
+      result.replaceChildren('Write to us at ', a);
+    };
+
+    const start = (e: Event) => {
+      if (!e.isTrusted || box.classList.contains('revealed')) return;
+      if (performance.now() - opened < MIN_PAGE_MS) {
+        box.classList.add('too-soon');
+        setTimeout(() => box.classList.remove('too-soon'), 600);
+        return;
+      }
+      box.classList.add('charging');
+      timer = window.setTimeout(reveal, HOLD_MS);
+    };
+    const stop = () => {
+      box.classList.remove('charging');
+      clearTimeout(timer);
+    };
+
+    btn.addEventListener('pointerdown', (e) => {
+      if (!e.isTrusted) return;
+      try { btn.setPointerCapture(e.pointerId); } catch { /* finger already lifted */ }
+      start(e);
+    });
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+    btn.addEventListener('keydown', (e) => {
+      if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); start(e); }
+    });
+    btn.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') stop(); });
+  });
+</script>
+
+<style>
+  .snapcheck { margin: 1.5rem 0; }
+  .hold {
+    display: inline-flex; align-items: center; gap: .8rem; position: relative;
+    padding: .7rem 1.2rem .7rem .7rem; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+    font: 700 .95rem var(--sans); user-select: none; -webkit-user-select: none; touch-action: none;
+    -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+  }
+  .hold[hidden] { display: none; }
+  .hold:hover { border-color: var(--accent); }
+  .ring { width: 44px; height: 44px; transform: rotate(-90deg); flex: none; }
+  .ring circle { fill: none; stroke-width: 3; }
+  .track { stroke: var(--rule); }
+  .charge { stroke: var(--accent); stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; }
+  .mini-spark { position: absolute; left: calc(.7rem + 12px); width: 20px; height: 20px; color: var(--accent); }
+
+  .charging .charge { stroke-dashoffset: 0; transition: stroke-dashoffset 1.1s linear; }
+  .charging .mini-spark { animation: jitter .12s infinite; }
+  .too-soon .hold { animation: shake .3s; }
+
+  .help { font-size: .85rem; color: var(--ink-faint); margin: .6rem 0 0; }
+  .result { font: 600 1.05rem var(--sans); margin: 0; animation: pop .35s ease-out; }
+  .result :global(a) { color: var(--accent-ink); }
+  .revealed .help { display: none; }
+
+  @keyframes jitter { 50% { transform: translate(.5px, -.5px) rotate(8deg); } }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  @keyframes pop { from { transform: scale(.9); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .charging .mini-spark, .too-soon .hold, .result { animation: none; }
+  }
+</style>
