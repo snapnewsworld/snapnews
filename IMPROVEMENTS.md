@@ -5,13 +5,21 @@ Add ideas to the Backlog in priority order. The loop takes the top unchecked ite
 
 ## Backlog
 
-- [ ] Corrections support: optional `correction` field in the article schema, shown as a notice at the top of the article.
-- [ ] Series support: optional `series` field, a series landing page, and "Next in this series" links.
-- [ ] Archive page listing all articles by month.
-- [ ] Print stylesheet for articles (hide menu, share buttons; show link URLs).
-- [ ] Accessibility audit with axe-core in Playwright (install as a dev dependency); fix every violation found.
-- [ ] Strip EXIF/location metadata from images automatically (use Astro's image pipeline for article images) and document how to add images in the README.
+- [ ] **Fix the RSS link (reported broken).** `/rss.xml` is valid, but browsers show an error, a download or raw XML when readers click it. Make the sidebar "RSS feed" link (and any other visible feed links) go to a new friendly HTML page `/feed/` ("Follow Snap News"): explains RSS in two sentences, shows the feed URL with a copy button, one-tap subscribe links for popular readers (Feedly, Inoreader, NewsBlur, The Old Reader, plus a `feed:` link), and a link to the raw XML. Keep `/rss.xml` for feed readers and the `<link rel="alternate">` tag. Also upgrade the feed itself: full article HTML in `content:encoded`, `atom:link rel="self"`, `<language>`, `<lastBuildDate>`, channel `<image>`, and per-section feeds (`/economy/rss.xml`, `/politics/rss.xml`, `/world/<region>/rss.xml`) listed on `/feed/`. Validate every feed parses as XML in the verify step.
+- [ ] Self-hosted typography: add a high-quality open-licence serif and sans (e.g. Source Serif 4 and Inter via `@fontsource-variable` npm packages, woff2 only, `font-display: swap`, subset to Latin) so the site looks the same on every device. No external font CDNs.
+- [ ] Light/dark theme toggle in the sidebar (system / light / dark), remembered in localStorage, no flash of the wrong theme (script in an external file loaded early; keep the CSP strict).
+- [ ] Corrections support: optional `correction` field in the article schema, shown as a notice at the top of the article, and a `/corrections/` log page.
+- [ ] Build-time charts: a `<Chart>` component for MDX or a fenced ```chart block that renders an accessible SVG (bar/line) from inline CSV at build time, no client JavaScript, with a data table fallback and source line.
+- [ ] Accessibility audit with axe-core in Playwright (dev dependency) across every page type, light and dark; fix every violation; add it to CI.
+- [ ] Performance and quality budget in CI: Lighthouse (using the preinstalled Chromium) on home, an article and the glossary; fail below 95 performance / 100 accessibility / 100 best practices / 100 SEO.
+- [ ] Internal link checker in CI: crawl `dist/` and fail on any broken internal link or missing anchor.
+- [ ] Structured data: `Organization` + `WebSite` (with SearchAction pointing at /search/?q=) on the home page, `BreadcrumbList` on articles and section pages.
+- [ ] Series support: optional `series` field, a series landing page, and "Part N of M" plus "Next in this series" links.
+- [ ] Archive page listing all articles by month, linked from the footer of the sidebar.
 - [ ] Previous/next article links at the end of each article.
+- [ ] Print stylesheet for articles (hide navigation and share buttons, show link URLs and sources).
+- [ ] Strip EXIF/location metadata from article images automatically (Astro image pipeline) and document how to add images in the README.
+- [ ] Home page polish: stronger visual hierarchy (lead story, secondary stories, "Explained" rail), empty states that look intentional, and a subtle animated spark on the lead kicker (respecting reduced motion).
 
 ## Needs owner
 
