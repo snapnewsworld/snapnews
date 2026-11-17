@@ -62,6 +62,14 @@ Run it repeatedly (e.g. `/loop /site-improve`) to keep improving the site.
    holds the hash; never amend).
 7. **Report** in 2-4 lines: what changed, how it was verified, what's next in the backlog.
 
+## Practical notes
+
+- Start the preview server as its own background command (`npx astro preview --port 4321`), not
+  chained with `&` inside another command, and write Playwright scripts to a file before running them.
+- This environment cannot reach `github.io`; verify against the local preview only.
+- Each round runs in a fresh sub-agent with no memory of earlier rounds: everything it needs must be
+  in this file, `IMPROVEMENTS.md` and the repo. If you learn something the next round needs, add it here.
+
 ## Stop conditions (end the loop instead of continuing)
 
 - The working tree was dirty at the start, or a push was rejected.
