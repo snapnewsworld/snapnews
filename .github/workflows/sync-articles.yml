@@ -1,0 +1,47 @@
+name: Auto-publish articles
+
+# Add or edit an article on ANY branch (or upload it through the GitHub website):
+# if the site still builds, the change is merged into main and deployed automatically.
+# Pushes straight to main are already deployed by deploy.yml.
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'src/content/**'
+      - 'public/**'
+
+permissions:
+  contents: write   # merge into main
+  actions: write    # trigger the deploy workflow
+
+concurrency:
+  group: sync-articles
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # A broken article fails here, so it never reaches the live site.
+      - run: npm run build
+      - name: Merge into main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B main origin/main
+          git merge --no-edit "${{ github.sha }}"
+          git push origin main
+      # Pushes made with GITHUB_TOKEN don't start other workflows, so start the deploy explicitly.
+      - name: Deploy to GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main

@@ -10,6 +10,8 @@ hosted free on GitHub Pages.
    `rent-prices-2026.md` becomes `/articles/rent-prices-2026/`.
 3. Fill in the details at the top (title, subtitle, type, regions, sources and so on). Set `draft: false` when it's ready.
 4. Commit to `main`. The site rebuilds and publishes itself in about a minute.
+   Committing to any other branch works too: `.github/workflows/sync-articles.yml` builds it and, if the
+   build passes, merges it into `main` and deploys it automatically. A broken article is stopped, not published.
 
 You can do all of this in the GitHub website or app, with no computer setup needed.
 
